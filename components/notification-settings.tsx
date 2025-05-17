@@ -26,13 +26,16 @@ export default function NotificationSettings() {
       const supported = isNotificationSupported()
       setIsSupported(supported)
 
-      if (supported) {
+      // 💡 Always try to get permission value, even if not fully supported
+      if ("Notification" in window) {
         setPermissionStatus(Notification.permission)
-        const savedPreferences = loadNotificationPreferences()
-        setPreferences(savedPreferences)
       }
+
+      const savedPreferences = loadNotificationPreferences()
+      setPreferences(savedPreferences)
     }
   }, [])
+
 
   // Close settings when clicking outside
   useEffect(() => {
@@ -52,58 +55,16 @@ export default function NotificationSettings() {
   const handleRequestPermission = async () => {
     if (
       !("Notification" in window) ||
-      !("serviceWorker" in navigator) ||
-      !("PushManager" in window)
+      !("serviceWorker" in navigator)
     ) {
-      alert("Perangkat ini tidak mendukung notifikasi push.")
+      alert("Notifikasi tidak didukung oleh browser ini.")
       return
     }
 
     const permission = await Notification.requestPermission()
-    console.log("Permission result:", permission)
     setPermissionStatus(permission)
-
-    if (permission === "granted") {
-      try {
-        await navigator.serviceWorker.register("/sw.js")
-        const sw = await navigator.serviceWorker.ready
-        console.log("Service worker is ready:", sw)
-
-        const subscription = await sw.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(
-            process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
-          ),
-        })
-
-        console.log("Push subscription object:", subscription)
-
-        const response = await fetch("/api/subscribe", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(subscription),
-        })
-
-        const result = await response.json()
-        console.log("API response from /api/subscribe:", result)
-
-        if (!response.ok) {
-          throw new Error(result.error || "Failed to subscribe")
-        }
-
-        setPreferences((prev) => ({ ...prev, enabled: true }))
-        saveNotificationPreferences({ ...preferences, enabled: true })
-        setShowSuccess(true)
-        setTimeout(() => setShowSuccess(false), 3000)
-
-      } catch (err) {
-        console.error("Subscription error:", err)
-      }
-    }
+    // ...rest of your logic
   }
-
 
   // Toggle notification settings panel
   const toggleSettings = () => {
@@ -204,12 +165,9 @@ export default function NotificationSettings() {
             </div>
           )}
 
-          {permissionStatus === "default" && (
-            <button
-              onClick={handleRequestPermission}
-              className="mb-4 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md"
-            >
-              Izinkan Notifikasi
+          {permissionStatus !== "granted" && (
+            <button onClick={handleRequestPermission} className="mb-4 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md">
+              {permissionStatus === "denied" ? "Notifikasi diblokir" : "Izinkan Notifikasi"}
             </button>
           )}
 

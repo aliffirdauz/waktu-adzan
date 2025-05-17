@@ -26,9 +26,15 @@ export const defaultNotificationPreference: NotificationPreference = {
 }
 
 // Check if notifications are supported in this browser
-export function isNotificationSupported() {
-  return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window
+export function isNotificationSupported(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    "Notification" in window &&
+    "serviceWorker" in navigator
+    // ❗ DON'T check for PushManager directly here — it's unreliable on iOS home screen mode
+  )
 }
+
 
 
 // Request notification permission
