@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { type Location, indonesianCities, getUserLocation, findNearestCity } from "@/services/location-service"
+import { type Location, indonesianCities, getUserLocation, findNearestCity, Coordinates } from "@/services/location-service"
 
 interface LocationSelectorProps {
   selectedLocation: Location | null
@@ -34,8 +34,13 @@ export default function LocationSelector({ selectedLocation, onLocationChange }:
       })
 
       // Race between geolocation and timeout
-      const coords = await Promise.race([getUserLocation(), timeoutPromise])
+      const result = await Promise.race([getUserLocation(), timeoutPromise])
 
+      if (!result || typeof result !== "object" || !("latitude" in result && "longitude" in result)) {
+        throw new Error("Invalid coordinates received")
+      }
+
+      const coords = result as Coordinates
       const nearestCity = findNearestCity(coords)
       onLocationChange(nearestCity)
     } catch (err) {

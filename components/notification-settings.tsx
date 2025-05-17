@@ -106,8 +106,15 @@ export default function NotificationSettings() {
 
   // If notifications are not supported, don't render anything
   if (!isSupported) {
-    return null
+    return (
+      <div>
+        <p className="text-sm text-red-500">
+          Notifikasi tidak didukung di browser ini. Coba gunakan Chrome atau install aplikasi sebagai PWA.
+        </p>
+      </div>
+    )
   }
+
 
   return (
     <div className="relative" ref={settingsRef}>
