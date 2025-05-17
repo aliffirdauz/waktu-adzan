@@ -50,11 +50,29 @@ export default function NotificationSettings() {
 
   // Request permission handler
   const handleRequestPermission = async () => {
-    const granted = await requestNotificationPermission()
-    setPermissionStatus(Notification.permission)
+    const permission = await Notification.requestPermission()
+    setPermissionStatus(permission)
 
-    if (granted) {
-      // Update preferences if permission was granted
+    if (permission === "granted") {
+      // Register service worker
+      const sw = await navigator.serviceWorker.register("/sw.js")
+
+      const subscription = await sw.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(
+          process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
+        ),
+      })
+
+      // Send to Supabase API route
+      await fetch("/api/subscribe", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(subscription),
+      })
+
       setPreferences((prev) => ({ ...prev, enabled: true }))
       saveNotificationPreferences({ ...preferences, enabled: true })
       setShowSuccess(true)
@@ -107,11 +125,13 @@ export default function NotificationSettings() {
   // If notifications are not supported, don't render anything
   if (!isSupported) {
     return (
-      <div>
-        <p className="text-sm text-red-500">
-          Notifikasi tidak didukung di browser ini. Coba gunakan Chrome atau install aplikasi sebagai PWA.
-        </p>
-      </div>
+      // use icon or text to indicate unsupported notifications
+      <button
+        className="flex items-center justify-center h-10 w-10 sm:h-10 sm:w-10 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+        aria-label="Pengaturan notifikasi"
+      >
+        <BellOff className="h-5 w-5 dark: text-red-400" />
+      </button>
     )
   }
 
@@ -243,4 +263,12 @@ export default function NotificationSettings() {
       )}
     </div>
   )
+}
+
+// --- Add this helper to convert VAPID public key ---
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4)
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
+  const rawData = atob(base64)
+  return new Uint8Array([...rawData].map((char) => char.charCodeAt(0)))
 }
