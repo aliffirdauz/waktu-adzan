@@ -31,6 +31,8 @@ export default function NotificationSettings() {
         setPermissionStatus(Notification.permission)
       }
 
+
+
       const savedPreferences = loadNotificationPreferences()
       setPreferences(savedPreferences)
     }
@@ -53,18 +55,70 @@ export default function NotificationSettings() {
 
   // Request permission handler
   const handleRequestPermission = async () => {
+    // console.log("🔔 Izinkan Notifikasi button clicked");
+
     if (
       !("Notification" in window) ||
       !("serviceWorker" in navigator)
     ) {
-      alert("Notifikasi tidak didukung oleh browser ini.")
-      return
+      alert("Notifikasi tidak didukung oleh browser ini.");
+      return;
     }
 
-    const permission = await Notification.requestPermission()
-    setPermissionStatus(permission)
-    // ...rest of your logic
-  }
+    const permission = await Notification.requestPermission();
+    // console.log("🛡️ Notification permission status:", permission);
+    setPermissionStatus(permission);
+
+    if (permission !== "granted") {
+      console.warn("🚫 Permission not granted");
+      return;
+    }
+
+    try {
+      // console.log("🔧 Registering service worker...");
+      await navigator.serviceWorker.register("/sw.js");
+
+      // console.log("⏳ Waiting for service worker to be ready...");
+      const sw = await navigator.serviceWorker.ready;
+      // console.log("✅ Service worker ready:", sw);
+
+      // console.log("🔑 VAPID key:", process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY);
+      const appServerKey = urlBase64ToUint8Array(
+        process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
+      );
+
+      // console.log("📬 Subscribing to push...");
+      const subscription = await sw.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: appServerKey,
+      });
+
+      // console.log("✅ Push subscription object:", subscription);
+
+      const response = await fetch("/api/subscribe", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(subscription),
+      });
+
+      const result = await response.json();
+      // console.log("📦 API response from /api/subscribe:", result);
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to subscribe");
+      }
+
+      setPreferences((prev) => ({ ...prev, enabled: true }));
+      saveNotificationPreferences({ ...preferences, enabled: true });
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
+    } catch (err) {
+      console.error("❗ Subscription error:", err instanceof Error ? err.message : err);
+    }
+  };
+
 
   // Toggle notification settings panel
   const toggleSettings = () => {
