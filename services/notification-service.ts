@@ -26,9 +26,14 @@ export const defaultNotificationPreference: NotificationPreference = {
 }
 
 // Check if notifications are supported in this browser
-export function isNotificationSupported(): boolean {
-  return "Notification" in window
+export function isNotificationSupported() {
+  console.log("SW support:", "serviceWorker" in navigator)
+  console.log("PushManager support:", "PushManager" in window)
+  console.log("Notification support:", "Notification" in window)
+
+  return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window
 }
+
 
 // Request notification permission
 export async function requestNotificationPermission(): Promise<boolean> {
@@ -128,8 +133,8 @@ export function scheduleNotifications(
     const timer = setTimeout(() => {
       sendNotification(`Waktu ${prayerNames[prayer]} dalam ${preferences.minutesBefore} menit`, {
         body: `Bersiap untuk sholat ${prayerNames[prayer]}`,
-        icon: "/favicon.ico",
-        badge: "/favicon.ico",
+        icon: "/icons/favicon.ico",
+        badge: "/icons/favicon.ico",
       })
     }, delay)
 

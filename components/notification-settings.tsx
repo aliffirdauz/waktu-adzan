@@ -51,32 +51,48 @@ export default function NotificationSettings() {
   // Request permission handler
   const handleRequestPermission = async () => {
     const permission = await Notification.requestPermission()
+    console.log("Permission result:", permission)
     setPermissionStatus(permission)
 
     if (permission === "granted") {
-      // Register service worker
-      const sw = await navigator.serviceWorker.register("/sw.js")
+      try {
+        // Register and wait for the service worker to activate
+        await navigator.serviceWorker.register("/sw.js")
+        const sw = await navigator.serviceWorker.ready
+        console.log("Service worker is ready:", sw)
 
-      const subscription = await sw.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(
-          process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
-        ),
-      })
+        const subscription = await sw.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(
+            process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
+          ),
+        })
 
-      // Send to Supabase API route
-      await fetch("/api/subscribe", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(subscription),
-      })
+        console.log("Push subscription object:", subscription)
 
-      setPreferences((prev) => ({ ...prev, enabled: true }))
-      saveNotificationPreferences({ ...preferences, enabled: true })
-      setShowSuccess(true)
-      setTimeout(() => setShowSuccess(false), 3000)
+        const response = await fetch("/api/subscribe", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(subscription),
+        })
+
+        const result = await response.json()
+        console.log("API response from /api/subscribe:", result)
+
+        if (!response.ok) {
+          throw new Error(result.error || "Failed to subscribe")
+        }
+
+        setPreferences((prev) => ({ ...prev, enabled: true }))
+        saveNotificationPreferences({ ...preferences, enabled: true })
+        setShowSuccess(true)
+        setTimeout(() => setShowSuccess(false), 3000)
+
+      } catch (err) {
+        console.error("Subscription error:", err)
+      }
     }
   }
 
@@ -117,7 +133,7 @@ export default function NotificationSettings() {
     if (permissionStatus === "granted") {
       sendNotification("Test Notifikasi Adzan", {
         body: `Anda akan menerima notifikasi ${preferences.minutesBefore} menit sebelum waktu sholat`,
-        icon: "/favicon.ico",
+        icon: "/icons/favicon.ico",
       })
     }
   }
