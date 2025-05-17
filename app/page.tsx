@@ -112,7 +112,7 @@ export default function Home() {
       <main className="flex flex-col gap-6 sm:gap-8 row-start-2 items-center sm:items-center w-full max-w-4xl">
         <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold text-center">Jadwal Adzan</h1>
         <p className="text-base sm:text-lg text-center text-gray-700 dark:text-gray-300">
-          Aplikasi ini menampilkan jadwal adzan dan waktu sholat di seluruh Indonesia.
+          Aplikasi ini menampilkan jadwal adzan dan waktu sholat di seluruh Indonesia. 
           <br className="hidden sm:block" />
           Anda dapat menggunakan aplikasi ini untuk mengetahui waktu sholat di lokasi Anda.
         </p>

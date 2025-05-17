@@ -1,6 +1,6 @@
 {
     "name": "Jadwal Adzan Indonesia",
-    "short_name": "Adzan",
+    "short_name": "Jadwal Adzan",
     "description": "Jadwal Waktu Sholat di Seluruh Indonesia",
     "start_url": "/",
     "display": "standalone",

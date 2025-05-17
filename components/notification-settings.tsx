@@ -30,9 +30,7 @@ export default function NotificationSettings() {
       if ("Notification" in window) {
         setPermissionStatus(Notification.permission)
       }
-
-
-
+      
       const savedPreferences = loadNotificationPreferences()
       setPreferences(savedPreferences)
     }
