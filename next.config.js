@@ -1,12 +1,10 @@
-// next.config.js
 const withPWA = require("next-pwa")({
-  dest: "public", // generates service worker in public
-  register: true,
-  skipWaiting: true,
+  disable: process.env.NODE_ENV === "development" || true, // disables it entirely
+  register: false,
+  skipWaiting: false,
 })
 
 const nextConfig = {
-  // your existing config
   reactStrictMode: true,
 }
 

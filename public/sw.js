@@ -22,27 +22,27 @@ if (!self.define) {
   const singleRequire = (uri, parentUri) => {
     uri = new URL(uri + ".js", parentUri).href;
     return registry[uri] || (
-      
-        new Promise(resolve => {
-          if ("document" in self) {
-            const script = document.createElement("script");
-            script.src = uri;
-            script.onload = resolve;
-            document.head.appendChild(script);
-          } else {
-            nextDefineUri = uri;
-            importScripts(uri);
-            resolve();
-          }
-        })
-      
-      .then(() => {
-        let promise = registry[uri];
-        if (!promise) {
-          throw new Error(`Module ${uri} didn’t register its module`);
+
+      new Promise(resolve => {
+        if ("document" in self) {
+          const script = document.createElement("script");
+          script.src = uri;
+          script.onload = resolve;
+          document.head.appendChild(script);
+        } else {
+          nextDefineUri = uri;
+          importScripts(uri);
+          resolve();
         }
-        return promise;
       })
+
+        .then(() => {
+          let promise = registry[uri];
+          if (!promise) {
+            throw new Error(`Module ${uri} didn’t register its module`);
+          }
+          return promise;
+        })
     );
   };
 
@@ -67,7 +67,8 @@ if (!self.define) {
     });
   };
 }
-define(['./workbox-8817a5e5'], (function (workbox) { 'use strict';
+define(['./workbox-8817a5e5'], (function (workbox) {
+  'use strict';
 
   importScripts();
   self.skipWaiting();
@@ -98,3 +99,23 @@ define(['./workbox-8817a5e5'], (function (workbox) { 'use strict';
   }), 'GET');
 
 }));
+
+self.addEventListener("push", (event) => {
+  const data = event.data?.json() || {
+    title: "Jadwal Sholat",
+    body: "Waktu sholat sudah tiba",
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: "/favicon.ico",
+    })
+  )
+})
+
+self.addEventListener("notificationclick", function (event) {
+  event.notification.close()
+  event.waitUntil(clients.openWindow("/"))
+})
+
