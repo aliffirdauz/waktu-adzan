@@ -220,9 +220,18 @@ export default function NotificationSettings() {
           )}
 
           {permissionStatus !== "granted" && (
-            <button onClick={handleRequestPermission} className="mb-4 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md">
-              {permissionStatus === "denied" ? "Notifikasi diblokir" : "Izinkan Notifikasi"}
-            </button>
+            <>
+              <button onClick={handleRequestPermission} className="mb-4 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md">
+                {permissionStatus === "denied" ? "Notifikasi diblokir" : "Izinkan Notifikasi"}
+              </button>
+              <div className="bg-gray-100 p-4 rounded text-sm text-gray-800">
+                <p>Standalone PWA: {window.matchMedia('(display-mode: standalone)').matches ? '✅' : '❌'}</p>
+                <p>Notification in window: {"Notification" in window ? '✅' : '❌'}</p>
+                <p>Permission: {Notification.permission}</p>
+                <p>Service Worker: {'serviceWorker' in navigator ? '✅' : '❌'}</p>
+              </div>
+
+            </>
           )}
 
           {permissionStatus === "granted" && (
