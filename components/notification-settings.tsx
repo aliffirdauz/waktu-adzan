@@ -50,13 +50,21 @@ export default function NotificationSettings() {
 
   // Request permission handler
   const handleRequestPermission = async () => {
+    if (
+      !("Notification" in window) ||
+      !("serviceWorker" in navigator) ||
+      !("PushManager" in window)
+    ) {
+      alert("Perangkat ini tidak mendukung notifikasi push.")
+      return
+    }
+
     const permission = await Notification.requestPermission()
     console.log("Permission result:", permission)
     setPermissionStatus(permission)
 
     if (permission === "granted") {
       try {
-        // Register and wait for the service worker to activate
         await navigator.serviceWorker.register("/sw.js")
         const sw = await navigator.serviceWorker.ready
         console.log("Service worker is ready:", sw)
@@ -95,6 +103,7 @@ export default function NotificationSettings() {
       }
     }
   }
+
 
   // Toggle notification settings panel
   const toggleSettings = () => {
@@ -139,17 +148,17 @@ export default function NotificationSettings() {
   }
 
   // If notifications are not supported, don't render anything
-  if (!isSupported) {
-    return (
-      // use icon or text to indicate unsupported notifications
-      <button
-        className="flex items-center justify-center h-10 w-10 sm:h-10 sm:w-10 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
-        aria-label="Pengaturan notifikasi"
-      >
-        <BellOff className="h-5 w-5 dark: text-red-400" />
-      </button>
-    )
-  }
+  // if (!isSupported) {
+  //   return (
+  //     // use icon or text to indicate unsupported notifications
+  //     <button
+  //       className="flex items-center justify-center h-10 w-10 sm:h-10 sm:w-10 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+  //       aria-label="Pengaturan notifikasi"
+  //     >
+  //       <BellOff className="h-5 w-5 dark: text-red-400" />
+  //     </button>
+  //   )
+  // }
 
 
   return (

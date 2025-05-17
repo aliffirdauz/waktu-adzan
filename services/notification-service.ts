@@ -27,10 +27,6 @@ export const defaultNotificationPreference: NotificationPreference = {
 
 // Check if notifications are supported in this browser
 export function isNotificationSupported() {
-  console.log("SW support:", "serviceWorker" in navigator)
-  console.log("PushManager support:", "PushManager" in window)
-  console.log("Notification support:", "Notification" in window)
-
   return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window
 }
 
