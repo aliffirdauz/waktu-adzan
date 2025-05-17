@@ -117,6 +117,13 @@ export default function Home() {
           Anda dapat menggunakan aplikasi ini untuk mengetahui waktu sholat di lokasi Anda.
         </p>
 
+        {typeof window !== "undefined" &&
+          !window.matchMedia("(display-mode: standalone)").matches && (
+            <div className="bg-yellow-200 text-yellow-800 p-2 text-sm text-center">
+              🚀 Untuk pengalaman penuh, tambahkan aplikasi ke Home Screen dari Browser anda.
+            </div>
+          )}
+
         {locationLoading ? (
           <div className="w-full max-w-2xl text-center p-4">
             <div className="animate-pulse space-y-4">
