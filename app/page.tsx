@@ -4,27 +4,34 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { type PrayerTimes, getPrayerTimesByCoordinates } from "@/services/adhan-api"
-import type { Location } from "@/services/location-service"
 import { formatDateForInput, formatDate } from "@/utils/date-utils"
 import PrayerTimesTable from "@/components/prayer-times-table"
-import LocationSelector from "@/components/location-selector"
-import { useDefaultLocation } from "@/hooks/use-default-location"
 import { ThemeToggle } from "@/components/theme-toggle"
 import NotificationSettings from "@/components/notification-settings"
 import { loadNotificationPreferences, scheduleNotifications } from "@/services/notification-service"
 import NextPrayerIndicator from "@/components/next-prayer-indicator"
 import PrayerNotificationHandler from "@/components/prayer-notification-handler"
+import HierarchicalLocationSelector from "@/components/hierarchical-location-selector"
 
 export default function Home() {
   const [date, setDate] = useState<string>(formatDateForInput(new Date()))
-  const {
-    location: selectedLocation,
-    isLoading: locationLoading,
-    setLocation: setSelectedLocation,
-  } = useDefaultLocation()
   const [prayerTimes, setPrayerTimes] = useState<PrayerTimes | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
+  const [showLocationSelector, setShowLocationSelector] = useState(false)
+  const [selectedLocation, setSelectedLocation] = useState<{
+    name: string
+    coordinates: { lat: number; lon: number }
+  } | null>(null)
+  const [locationLoading, setLocationLoading] = useState<boolean>(false)
+  const [isStandalone, setIsStandalone] = useState(true);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const standalone = window.matchMedia('(display-mode: standalone)').matches;
+      setIsStandalone(standalone);
+    }
+  }, []);
 
   useEffect(() => {
     if (selectedLocation) {
@@ -62,8 +69,8 @@ export default function Home() {
       const formattedDate = formatDate(new Date(date))
 
       const times = await getPrayerTimesByCoordinates(
-        selectedLocation.latitude,
-        selectedLocation.longitude,
+        selectedLocation.coordinates.lat,
+        selectedLocation.coordinates.lon,
         formattedDate,
       )
 
@@ -77,8 +84,12 @@ export default function Home() {
     }
   }
 
-  const handleLocationChange = (location: Location) => {
+  const handleLocationChange = (location: {
+    name: string
+    coordinates: { lat: number; lon: number }
+  }) => {
     setSelectedLocation(location)
+    setShowLocationSelector(false)
   }
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -112,17 +123,18 @@ export default function Home() {
       <main className="flex flex-col gap-6 sm:gap-8 row-start-2 items-center sm:items-center w-full max-w-4xl">
         <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold text-center">Jadwal Adzan</h1>
         <p className="text-base sm:text-lg text-center text-gray-700 dark:text-gray-300">
-          Aplikasi ini menampilkan jadwal adzan dan waktu sholat di seluruh Indonesia. 
+          Aplikasi ini menampilkan jadwal adzan dan waktu sholat di seluruh Indonesia.
           <br className="hidden sm:block" />
           Anda dapat menggunakan aplikasi ini untuk mengetahui waktu sholat di lokasi Anda.
         </p>
 
-        {typeof window !== "undefined" &&
-          !window.matchMedia("(display-mode: standalone)").matches && (
+        {!isStandalone &&
+          (
             <div className="bg-yellow-200 text-yellow-800 p-2 text-sm text-center">
               🚀 Untuk pengalaman penuh, tambahkan aplikasi ke Home Screen dari Browser anda.
             </div>
-          )}
+          )
+        }
 
         {locationLoading ? (
           <div className="w-full max-w-2xl text-center p-4">
@@ -141,8 +153,9 @@ export default function Home() {
             {/* Show next prayer indicator only if date is today */}
             {prayerTimes && isToday() && <NextPrayerIndicator prayerTimes={prayerTimes} />}
 
-            <div className="flex flex-col sm:flex-row gap-6 items-center bg-gray-50 dark:bg-gray-800 p-4 rounded-lg w-full max-w-2xl">
-              <div className="flex flex-col gap-2 items-center w-full sm:w-auto">
+            <div className="flex flex-col gap-6 items-center w-full max-w-2xl">
+              {/* Date selection */}
+              <div className="flex flex-col gap-2 items-center w-full bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
                 <label htmlFor="date" className="text-sm sm:text-base font-semibold text-gray-500 dark:text-gray-400">
                   Pilih Tanggal
                 </label>
@@ -155,7 +168,34 @@ export default function Home() {
                 />
               </div>
 
-              <LocationSelector selectedLocation={selectedLocation} onLocationChange={handleLocationChange} />
+              {/* Location selection */}
+              <div className="w-full">
+                {showLocationSelector ? (
+                  <HierarchicalLocationSelector onLocationSelected={handleLocationChange} />
+                ) : (
+                  <div className="flex flex-col items-center gap-4 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg w-full">
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="text-sm sm:text-base font-semibold text-gray-500 dark:text-gray-400">
+                        Lokasi Saat Ini:
+                      </span>
+                      <span className="font-medium text-center text-gray-800 dark:text-gray-200">
+                        {selectedLocation?.name || "Belum dipilih"}
+                      </span>
+                      {selectedLocation?.coordinates && (
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
+                          Koordinat: {selectedLocation.coordinates.lat}, {selectedLocation.coordinates.lon}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => setShowLocationSelector(true)}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium"
+                    >
+                      Ubah Lokasi
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </>
         )}
