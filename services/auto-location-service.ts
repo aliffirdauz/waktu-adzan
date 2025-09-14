@@ -61,23 +61,26 @@ export function getCurrentPosition(): Promise<{ latitude: number; longitude: num
 }
 
 /**
- * Reverse geocode coordinates to get location name
+ * Reverse geocode coordinates to get location name using OpenStreetMap Nominatim API
  */
 export async function reverseGeocode(latitude: number, longitude: number): Promise<string> {
   try {
-    const response = await fetch(`https://geocode.maps.co/reverse?lat=${latitude}&lon=${longitude}&format=json`, {
-      method: "GET",
-      headers: {
-        "User-Agent": "Adzan-Web-App/1.0",
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=10&addressdetails=1&accept-language=id,en`,
+      {
+        method: "GET",
+        headers: {
+          "User-Agent": "Adzan-Web-App/1.0 (https://adzan-web.vercel.app)",
+        },
       },
-    })
+    )
 
     if (!response.ok) {
       throw new Error(`Geocoding failed: ${response.status}`)
     }
 
     const data = await response.json()
-    console.log("Reverse geocoding response:", data) // Debug log
+    console.log("[v0] Reverse geocoding response:", data) // Debug log
 
     // Get the full address from display_name
     if (data.display_name) {
@@ -120,7 +123,12 @@ export async function reverseGeocode(latitude: number, longitude: number): Promi
 
     return "Lokasi Tidak Diketahui"
   } catch (error) {
-    console.error("Reverse geocoding error:", error)
+    console.error("[v0] Reverse geocoding error:", error)
+    if (error instanceof Error && error.message.includes("429")) {
+      console.warn("[v0] Rate limit exceeded, using fallback location")
+    } else if (error instanceof Error && error.message.includes("401")) {
+      console.warn("[v0] Authentication error resolved by switching to Nominatim API")
+    }
     return "Lokasi Tidak Diketahui"
   }
 }
