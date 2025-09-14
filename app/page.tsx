@@ -11,33 +11,30 @@ import NotificationSettings from "@/components/notification-settings"
 import { loadNotificationPreferences, scheduleNotifications } from "@/services/notification-service"
 import NextPrayerIndicator from "@/components/next-prayer-indicator"
 import PrayerNotificationHandler from "@/components/prayer-notification-handler"
-import HierarchicalLocationSelector from "@/components/hierarchical-location-selector"
+import AutoLocationDetector from "@/components/auto-location-detector"
+import { getCachedLocation, type UserLocation } from "@/services/auto-location-service"
 
 export default function Home() {
   const [date, setDate] = useState<string>(formatDateForInput(new Date()))
+  const [currentLocation, setCurrentLocation] = useState<UserLocation | null>(null)
   const [prayerTimes, setPrayerTimes] = useState<PrayerTimes | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
-  const [showLocationSelector, setShowLocationSelector] = useState(false)
-  const [selectedLocation, setSelectedLocation] = useState<{
-    name: string
-    coordinates: { lat: number; lon: number }
-  } | null>(null)
-  const [locationLoading, setLocationLoading] = useState<boolean>(false)
-  const [isStandalone, setIsStandalone] = useState(true);
 
+  // Load cached location on component mount
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const standalone = window.matchMedia('(display-mode: standalone)').matches;
-      setIsStandalone(standalone);
+    const cached = getCachedLocation()
+    if (cached) {
+      setCurrentLocation(cached)
     }
-  }, []);
+  }, [])
 
+  // Fetch prayer times when location or date changes
   useEffect(() => {
-    if (selectedLocation) {
+    if (currentLocation) {
       fetchPrayerTimes()
     }
-  }, [selectedLocation, date])
+  }, [currentLocation, date])
 
   // Schedule notifications when prayer times change
   useEffect(() => {
@@ -59,7 +56,7 @@ export default function Home() {
   }, [prayerTimes])
 
   const fetchPrayerTimes = async () => {
-    if (!selectedLocation) return
+    if (!currentLocation) return
 
     setIsLoading(true)
     setError(null)
@@ -69,8 +66,8 @@ export default function Home() {
       const formattedDate = formatDate(new Date(date))
 
       const times = await getPrayerTimesByCoordinates(
-        selectedLocation.coordinates.lat,
-        selectedLocation.coordinates.lon,
+        currentLocation.latitude,
+        currentLocation.longitude,
         formattedDate,
       )
 
@@ -84,12 +81,8 @@ export default function Home() {
     }
   }
 
-  const handleLocationChange = (location: {
-    name: string
-    coordinates: { lat: number; lon: number }
-  }) => {
-    setSelectedLocation(location)
-    setShowLocationSelector(false)
+  const handleLocationDetected = (location: UserLocation) => {
+    setCurrentLocation(location)
   }
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -123,82 +116,30 @@ export default function Home() {
       <main className="flex flex-col gap-6 sm:gap-8 row-start-2 items-center sm:items-center w-full max-w-4xl">
         <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold text-center">Jadwal Adzan</h1>
         <p className="text-base sm:text-lg text-center text-gray-700 dark:text-gray-300">
-          Aplikasi ini menampilkan jadwal adzan dan waktu sholat di seluruh Indonesia.
+          Aplikasi ini menampilkan jadwal adzan dan waktu sholat berdasarkan lokasi Anda.
           <br className="hidden sm:block" />
-          Anda dapat menggunakan aplikasi ini untuk mengetahui waktu sholat di lokasi Anda.
+          Lokasi akan terdeteksi otomatis dan disimpan untuk penggunaan selanjutnya.
         </p>
 
-        {!isStandalone &&
-          (
-            <div className="bg-yellow-200 text-yellow-800 p-2 text-sm text-center">
-              🚀 Untuk pengalaman penuh, tambahkan aplikasi ke Home Screen dari Browser anda.
-            </div>
-          )
-        }
+        {/* Auto location detector */}
+        <AutoLocationDetector onLocationDetected={handleLocationDetected} currentLocation={currentLocation} />
 
-        {locationLoading ? (
-          <div className="w-full max-w-2xl text-center p-4">
-            <div className="animate-pulse space-y-4">
-              <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded"></div>
-            </div>
-          </div>
-        ) : (
-          <>
-            {selectedLocation && (
-              <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg text-green-700 dark:text-green-400 text-center w-full max-w-2xl">
-                Menampilkan jadwal sholat untuk {selectedLocation.name}, Indonesia
-              </div>
-            )}
+        {/* Show next prayer indicator only if date is today */}
+        {prayerTimes && isToday() && <NextPrayerIndicator prayerTimes={prayerTimes} />}
 
-            {/* Show next prayer indicator only if date is today */}
-            {prayerTimes && isToday() && <NextPrayerIndicator prayerTimes={prayerTimes} />}
-
-            <div className="flex flex-col gap-6 items-center w-full max-w-2xl">
-              {/* Date selection */}
-              <div className="flex flex-col gap-2 items-center w-full bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                <label htmlFor="date" className="text-sm sm:text-base font-semibold text-gray-500 dark:text-gray-400">
-                  Pilih Tanggal
-                </label>
-                <input
-                  type="date"
-                  id="date"
-                  className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-lg p-2 w-full max-w-xs text-gray-700 dark:text-gray-300"
-                  value={date}
-                  onChange={handleDateChange}
-                />
-              </div>
-
-              {/* Location selection */}
-              <div className="w-full">
-                {showLocationSelector ? (
-                  <HierarchicalLocationSelector onLocationSelected={handleLocationChange} />
-                ) : (
-                  <div className="flex flex-col items-center gap-4 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg w-full">
-                    <div className="flex flex-col items-center gap-1">
-                      <span className="text-sm sm:text-base font-semibold text-gray-500 dark:text-gray-400">
-                        Lokasi Saat Ini:
-                      </span>
-                      <span className="font-medium text-center text-gray-800 dark:text-gray-200">
-                        {selectedLocation?.name || "Belum dipilih"}
-                      </span>
-                      {selectedLocation?.coordinates && (
-                        <span className="text-sm text-gray-500 dark:text-gray-400">
-                          Koordinat: {selectedLocation.coordinates.lat}, {selectedLocation.coordinates.lon}
-                        </span>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => setShowLocationSelector(true)}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium"
-                    >
-                      Ubah Lokasi
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </>
-        )}
+        {/* Date selection */}
+        <div className="flex flex-col gap-2 items-center w-full max-w-2xl bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+          <label htmlFor="date" className="text-sm sm:text-base font-semibold text-gray-500 dark:text-gray-400">
+            Pilih Tanggal
+          </label>
+          <input
+            type="date"
+            id="date"
+            className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-lg p-2 w-full max-w-xs text-gray-700 dark:text-gray-300"
+            value={date}
+            onChange={handleDateChange}
+          />
+        </div>
 
         <div className="flex flex-col gap-4 items-center w-full">
           {error && (

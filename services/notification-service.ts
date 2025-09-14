@@ -27,15 +27,8 @@ export const defaultNotificationPreference: NotificationPreference = {
 
 // Check if notifications are supported in this browser
 export function isNotificationSupported(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    "Notification" in window &&
-    "serviceWorker" in navigator
-    // ❗ DON'T check for PushManager directly here — it's unreliable on iOS home screen mode
-  )
+  return "Notification" in window
 }
-
-
 
 // Request notification permission
 export async function requestNotificationPermission(): Promise<boolean> {
@@ -135,8 +128,8 @@ export function scheduleNotifications(
     const timer = setTimeout(() => {
       sendNotification(`Waktu ${prayerNames[prayer]} dalam ${preferences.minutesBefore} menit`, {
         body: `Bersiap untuk sholat ${prayerNames[prayer]}`,
-        icon: "/icons/favicon.ico",
-        badge: "/icons/favicon.ico",
+        icon: "/favicon.ico",
+        badge: "/favicon.ico",
       })
     }, delay)
 

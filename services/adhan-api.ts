@@ -158,9 +158,8 @@ export async function getPrayerTimesByCoordinates(
   latitude: number,
   longitude: number,
   date: string,
-  method = 20, // Default to KEMENAG method
+  method = 20, // Default to University of Islamic Sciences, Karachi
 ): Promise<PrayerTimes | null> {
-  console.log("Fetching prayer times for coordinates:", latitude, longitude, date)
   try {
     const response = await fetch(
       `https://api.aladhan.com/v1/timings/${date}?latitude=${latitude}&longitude=${longitude}&method=${method}`,
