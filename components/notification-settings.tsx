@@ -26,16 +26,13 @@ export default function NotificationSettings() {
       const supported = isNotificationSupported()
       setIsSupported(supported)
 
-      // 💡 Always try to get permission value, even if not fully supported
-      if ("Notification" in window) {
+      if (supported) {
         setPermissionStatus(Notification.permission)
+        const savedPreferences = loadNotificationPreferences()
+        setPreferences(savedPreferences)
       }
-      
-      const savedPreferences = loadNotificationPreferences()
-      setPreferences(savedPreferences)
     }
   }, [])
-
 
   // Close settings when clicking outside
   useEffect(() => {
@@ -53,70 +50,17 @@ export default function NotificationSettings() {
 
   // Request permission handler
   const handleRequestPermission = async () => {
-    // console.log("🔔 Izinkan Notifikasi button clicked");
+    const granted = await requestNotificationPermission()
+    setPermissionStatus(Notification.permission)
 
-    if (
-      !("Notification" in window) ||
-      !("serviceWorker" in navigator)
-    ) {
-      alert("Notifikasi tidak didukung oleh browser ini.");
-      return;
+    if (granted) {
+      // Update preferences if permission was granted
+      setPreferences((prev) => ({ ...prev, enabled: true }))
+      saveNotificationPreferences({ ...preferences, enabled: true })
+      setShowSuccess(true)
+      setTimeout(() => setShowSuccess(false), 3000)
     }
-
-    const permission = await Notification.requestPermission();
-    // console.log("🛡️ Notification permission status:", permission);
-    setPermissionStatus(permission);
-
-    if (permission !== "granted") {
-      console.warn("🚫 Permission not granted");
-      return;
-    }
-
-    try {
-      // console.log("🔧 Registering service worker...");
-      await navigator.serviceWorker.register("/sw.js");
-
-      // console.log("⏳ Waiting for service worker to be ready...");
-      const sw = await navigator.serviceWorker.ready;
-      // console.log("✅ Service worker ready:", sw);
-
-      // console.log("🔑 VAPID key:", process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY);
-      const appServerKey = urlBase64ToUint8Array(
-        process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
-      );
-
-      // console.log("📬 Subscribing to push...");
-      const subscription = await sw.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: appServerKey,
-      });
-
-      // console.log("✅ Push subscription object:", subscription);
-
-      const response = await fetch("/api/subscribe", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(subscription),
-      });
-
-      const result = await response.json();
-      // console.log("📦 API response from /api/subscribe:", result);
-
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to subscribe");
-      }
-
-      setPreferences((prev) => ({ ...prev, enabled: true }));
-      saveNotificationPreferences({ ...preferences, enabled: true });
-      setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 3000);
-    } catch (err) {
-      console.error("❗ Subscription error:", err instanceof Error ? err.message : err);
-    }
-  };
-
+  }
 
   // Toggle notification settings panel
   const toggleSettings = () => {
@@ -155,24 +99,15 @@ export default function NotificationSettings() {
     if (permissionStatus === "granted") {
       sendNotification("Test Notifikasi Adzan", {
         body: `Anda akan menerima notifikasi ${preferences.minutesBefore} menit sebelum waktu sholat`,
-        icon: "/icons/favicon.ico",
+        icon: "/favicon.ico",
       })
     }
   }
 
   // If notifications are not supported, don't render anything
-  // if (!isSupported) {
-  //   return (
-  //     // use icon or text to indicate unsupported notifications
-  //     <button
-  //       className="flex items-center justify-center h-10 w-10 sm:h-10 sm:w-10 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
-  //       aria-label="Pengaturan notifikasi"
-  //     >
-  //       <BellOff className="h-5 w-5 dark: text-red-400" />
-  //     </button>
-  //   )
-  // }
-
+  if (!isSupported) {
+    return null
+  }
 
   return (
     <div className="relative" ref={settingsRef}>
@@ -217,19 +152,13 @@ export default function NotificationSettings() {
             </div>
           )}
 
-          {permissionStatus !== "granted" && (
-            <>
-              <button onClick={handleRequestPermission} className="mb-4 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md">
-                {permissionStatus === "denied" ? "Notifikasi diblokir" : "Izinkan Notifikasi"}
-              </button>
-              <div className="bg-gray-100 p-4 rounded text-sm text-gray-800">
-                <p>Standalone PWA: {window.matchMedia('(display-mode: standalone)').matches ? '✅' : '❌'}</p>
-                <p>Notification in window: {"Notification" in window ? '✅' : '❌'}</p>
-                <p>Permission: {Notification.permission}</p>
-                <p>Service Worker: {'serviceWorker' in navigator ? '✅' : '❌'}</p>
-              </div>
-
-            </>
+          {permissionStatus === "default" && (
+            <button
+              onClick={handleRequestPermission}
+              className="mb-4 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md"
+            >
+              Izinkan Notifikasi
+            </button>
           )}
 
           {permissionStatus === "granted" && (
@@ -307,12 +236,4 @@ export default function NotificationSettings() {
       )}
     </div>
   )
-}
-
-// --- Add this helper to convert VAPID public key ---
-function urlBase64ToUint8Array(base64String: string) {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4)
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
-  const rawData = atob(base64)
-  return new Uint8Array([...rawData].map((char) => char.charCodeAt(0)))
 }
