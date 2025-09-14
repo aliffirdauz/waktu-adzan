@@ -158,7 +158,7 @@ export async function getPrayerTimesByCoordinates(
   latitude: number,
   longitude: number,
   date: string,
-  method = 3, // Default to University of Islamic Sciences, Karachi
+  method = 20, // Default to University of Islamic Sciences, Karachi
 ): Promise<PrayerTimes | null> {
   try {
     const response = await fetch(
